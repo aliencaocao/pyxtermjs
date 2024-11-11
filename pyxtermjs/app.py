@@ -113,7 +113,7 @@ def main():
     )
     parser.add_argument(
         "--host",
-        default="127.0.0.1",
+        default="0.0.0.0",
         help="host to run server on (use 0.0.0.0 to allow access from other hosts)",
     )
     parser.add_argument("--debug", action="store_true", help="debug the server")
