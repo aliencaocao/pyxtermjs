@@ -13,12 +13,14 @@ import shlex
 import logging
 import sys
 import waitress
+from flask_cors import CORS
 
 logging.getLogger("werkzeug").setLevel(logging.ERROR)
 
 __version__ = "0.5.0.2"
 
 app = Flask(__name__, template_folder=".", static_folder=".", static_url_path="")
+CORS(app)
 app.config["SECRET_KEY"] = "secret!"
 app.config["fd"] = None
 app.config["child_pid"] = None
