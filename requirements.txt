@@ -22,4 +22,4 @@ python-engineio
     # via python-socketio
 python-socketio
     # via flask-socketio
-waitress
+eventlet

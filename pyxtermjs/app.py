@@ -12,7 +12,6 @@ import fcntl
 import shlex
 import logging
 import sys
-import waitress
 
 logging.getLogger("werkzeug").setLevel(logging.ERROR)
 
@@ -146,10 +145,7 @@ def main():
         level=logging.DEBUG if args.debug else logging.INFO,
     )
     logging.info(f"serving on http://{args.host}:{args.port}")
-
-    waitress.serve(app, host=args.host, port=args.port)
-    # socketio.run(app, debug=args.debug, port=args.port, host=args.host)
-    # cors_allowed_origins="https://webtty.uimatrix.uk.to"
+    socketio.run(app, debug=args.debug, port=args.port, host=args.host)
 
 if __name__ == "__main__":
     main()
