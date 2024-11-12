@@ -22,7 +22,7 @@ app = Flask(__name__, template_folder=".", static_folder=".", static_url_path=""
 app.config["SECRET_KEY"] = "secret!"
 app.config["fd"] = None
 app.config["child_pid"] = None
-socketio = SocketIO(app)
+socketio = SocketIO(app, cors_allowed_origins=["*"])
 
 
 def set_winsize(fd, row, col, xpix=0, ypix=0):
@@ -146,9 +146,10 @@ def main():
         level=logging.DEBUG if args.debug else logging.INFO,
     )
     logging.info(f"serving on http://{args.host}:{args.port}")
+
     waitress.serve(app, host=args.host, port=args.port)
     # socketio.run(app, debug=args.debug, port=args.port, host=args.host)
-
+    # cors_allowed_origins="https://webtty.uimatrix.uk.to"
 
 if __name__ == "__main__":
     main()
