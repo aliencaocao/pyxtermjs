@@ -40,13 +40,17 @@
       term.loadAddon(fit);
       term.loadAddon(new WebLinksAddon.WebLinksAddon());
       term.loadAddon(new SearchAddon.SearchAddon());
-        term.loadAddon(new WebglAddon.WebglAddon());
+      term.loadAddon(new WebglAddon.WebglAddon());
 
       term.open(document.getElementById("terminal"));
       fit.fit();
       term.resize(15, 50);
       console.log(`size: ${term.cols} columns, ${term.rows} rows`);
       fit.fit();
+      term.writeln("Welcome to interactive shell. The following utility has already been installed, but you are free to install more. You have root privileges.");
+      term.writeln("1. wget");
+      term.writeln("2. curl");
+      term.writeln("3. nano");
       term.writeln("Hint:");
       term.writeln("You can copy with ctrl+shift+x");
       term.writeln("You can paste with ctrl+shift+v");
