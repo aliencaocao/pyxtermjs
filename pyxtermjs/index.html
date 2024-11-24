@@ -1,122 +1,154 @@
 <html lang="en">
-  <head>
-    <meta charset="utf-8" />
-    <title>pyxterm.js</title>
+<head>
+    <meta charset="utf-8"/>
+    <title>
+        pyxterm.js</title>
     <style>
-      html {
-        font-family: monospace;
-        background-color: black;
-        color: white;
-        height: 100%;
-      }
-      #status {
-        color: black;
-      }
+        html {
+            font-family: monospace;
+            background-color: black;
+            color: white;
+            height: 100%;
+            overflow: hidden;
+        }
+
+        #status {
+            color: black;
+        }
+
+        /* Hide scrollbar for the terminal */
+        .xterm .xterm-viewport {
+            overflow-y: hidden !important;
+        }
+
+        .xterm .xterm-viewport::-webkit-scrollbar {
+            display: none;
+        }
+
+        .xterm .xterm-viewport {
+            scrollbar-width: none;
+        }
     </style>
     <link
-      rel="stylesheet"
-      href="https://unpkg.com/xterm@5.3.0/css/xterm.css"
+            rel="stylesheet"
+            href="https://unpkg.com/xterm@5.3.0/css/xterm.css"
     />
-  </head>
-  <body>
-    <span style="font-size: small"
-      >status:
-      <span style="font-size: small" id="status">connecting...</span></span
-    >
+</head>
+<body>
+<span style="font-size: small"
+>status:
+      <span style="font-size: small"
+            id="status">connecting...</span></span
+>
 
-    <div style="width: 100%; height: calc(100% - 50px)" id="terminal"></div>
+<div style="width: 100%; height: calc(100% - 50px)"
+     id="terminal"></div>
 
-    <!-- xterm -->
-    <script src="https://unpkg.com/xterm@5.3.0/lib/xterm.js"></script>
-    <script src="https://unpkg.com/xterm-addon-fit@0.8.0/lib/xterm-addon-fit.js"></script>
-    <script src="https://unpkg.com/xterm-addon-web-links@0.9.0/lib/xterm-addon-web-links.js"></script>
-    <script src="https://unpkg.com/xterm-addon-search@0.13.0/lib/xterm-addon-search.js"></script>
-    <script src="https://unpkg.com/xterm-addon-webgl@0.16.0/lib/xterm-addon-webgl.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.8.1/socket.io.min.js"></script>
+<!-- xterm -->
+<script src="https://unpkg.com/xterm@5.3.0/lib/xterm.js"></script>
+<script src="https://unpkg.com/xterm-addon-fit@0.8.0/lib/xterm-addon-fit.js"></script>
+<script src="https://unpkg.com/xterm-addon-web-links@0.9.0/lib/xterm-addon-web-links.js"></script>
+<script src="https://unpkg.com/xterm-addon-search@0.13.0/lib/xterm-addon-search.js"></script>
+<script src="https://unpkg.com/xterm-addon-webgl@0.16.0/lib/xterm-addon-webgl.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.8.1/socket.io.min.js"></script>
 
-    <script>
-      const term = new Terminal({
+<script>
+    let isInitialized = false;
+
+    const term = new Terminal({
         cursorBlink: true,
         macOptionIsMeta: true,
         scrollback: true,
-      });
-      term.attachCustomKeyEventHandler(customKeyEventHandler);
-      // https://github.com/xtermjs/xterm.js/issues/2941
-      const fit = new FitAddon.FitAddon();
-      term.loadAddon(fit);
-      term.loadAddon(new WebLinksAddon.WebLinksAddon());
-      term.loadAddon(new SearchAddon.SearchAddon());
-      term.loadAddon(new WebglAddon.WebglAddon());
+    });
 
-      term.open(document.getElementById("terminal"));
-      fit.fit();
-      term.resize(15, 50);
-      console.log(`size: ${term.cols} columns, ${term.rows} rows`);
-      fit.fit();
-      term.writeln("Welcome to interactive shell. The following utility has already been installed, but you are free to install more. You have root privileges.");
-      term.writeln("1. wget");
-      term.writeln("2. curl");
-      term.writeln("3. nano");
-      term.writeln("Hint:");
-      term.writeln("You can copy with ctrl+shift+x");
-      term.writeln("You can paste with ctrl+shift+v");
-      term.writeln('')
-      term.onData((data) => {
-        console.log("browser terminal received new data:", data);
-        socket.emit("pty-input", { input: data });
-      });
+    term.attachCustomKeyEventHandler(customKeyEventHandler);
+    const fit = new FitAddon.FitAddon();
+    term.loadAddon(fit);
+    term.loadAddon(new WebLinksAddon.WebLinksAddon());
+    term.loadAddon(new SearchAddon.SearchAddon());
+    term.loadAddon(new WebglAddon.WebglAddon());
 
-      const socket = io.connect("/pty");
-      const status = document.getElementById("status");
+    term.open(document.getElementById("terminal"));
+    fit.fit();
+    term.resize(15, 50);
+    console.log(`size: ${term.cols} columns, ${term.rows} rows`);
+    fit.fit();
 
-      socket.on("pty-output", function (data) {
+    // Welcome message
+    term.writeln("Welcome to interactive shell. The following utility has already been installed, but you are free to install more. You have root privileges.");
+    term.writeln("1. wget");
+    term.writeln("2. curl");
+    term.writeln("3. nano");
+    term.writeln("Hint:");
+    term.writeln("You can copy with ctrl+shift+x");
+    term.writeln("You can paste with ctrl+shift+v");
+    term.writeln('');
+
+    const socket = io.connect("/pty");
+    const status = document.getElementById("status");
+
+    // Wait for initial connection before enabling input
+    socket.on("connect", () => {
+        fitToscreen();
+        status.innerHTML = '<span style="background-color: lightgreen;">connected</span>';
+
+        // Send an initial carriage return to trigger prompt
+        socket.emit("pty-input", {input: "\r"});
+
+        // Only attach the data handler after connection is established
+        if (!isInitialized) {
+            term.onData((data) => {
+                console.log("browser terminal received new data:", data);
+                socket.emit("pty-input", {input: data});
+            });
+            isInitialized = true;
+        }
+    });
+
+    socket.on("pty-output", function (data) {
         console.log("new output received from server:", data.output);
         term.write(data.output);
-      });
+    });
 
-      socket.on("connect", () => {
-        fitToscreen();
-        status.innerHTML =
-          '<span style="background-color: lightgreen;">connected</span>';
-      });
+    socket.on("disconnect", () => {
+        status.innerHTML = '<span style="background-color: #ff8383;">disconnected</span>';
+    });
 
-      socket.on("disconnect", () => {
-        status.innerHTML =
-          '<span style="background-color: #ff8383;">disconnected</span>';
-      });
-
-      function fitToscreen() {
+    function fitToscreen() {
         fit.fit();
-        const dims = { cols: term.cols, rows: term.rows };
+        const dims = {
+            cols: term.cols,
+            rows: term.rows
+        };
         console.log("sending new dimensions to server's pty", dims);
         socket.emit("resize", dims);
-      }
+    }
 
-      function debounce(func, wait_ms) {
+    function debounce(func, wait_ms) {
         let timeout;
         return function (...args) {
-          const context = this;
-          clearTimeout(timeout);
-          timeout = setTimeout(() => func.apply(context, args), wait_ms);
+            const context = this;
+            clearTimeout(timeout);
+            timeout = setTimeout(() => func.apply(context, args), wait_ms);
         };
-      }
+    }
 
       /**
        * Handle copy and paste events
        */
-      function customKeyEventHandler(e) {
+    function customKeyEventHandler(e) {
         if (e.type !== "keydown") {
-          return true;
+            return true;
         }
         if (e.ctrlKey && e.shiftKey) {
-          const key = e.key.toLowerCase();
-          if (key === "v") {
-            // ctrl+shift+v: paste whatever is in the clipboard
-            navigator.clipboard.readText().then((toPaste) => {
-              term.writeText(toPaste);
-            });
-            return false;
-          } else if (key === "c" || key === "x") {
+            const key = e.key.toLowerCase();
+            if (key === "v") {
+                // ctrl+shift+v: paste whatever is in the clipboard
+                navigator.clipboard.readText().then((toPaste) => {
+                    term.writeText(toPaste);
+                });
+                return false;
+            } else if (key === "c" || key === "x") {
             // ctrl+shift+x: copy whatever is highlighted to clipboard
 
             // 'x' is used as an alternate to 'c' because ctrl+c is taken
@@ -124,17 +156,17 @@
             // (open devtools).
             // I'm not aware of ctrl+shift+x being used by anything in the terminal
             // or browser
-            const toCopy = term.getSelection();
-            navigator.clipboard.writeText(toCopy);
-            term.focus();
-            return false;
-          }
+                const toCopy = term.getSelection();
+                navigator.clipboard.writeText(toCopy);
+                term.focus();
+                return false;
+            }
         }
         return true;
-      }
+    }
 
-      const wait_ms = 50;
-      window.onresize = debounce(fitToscreen, wait_ms);
-    </script>
-  </body>
+    const wait_ms = 50;
+    window.onresize = debounce(fitToscreen, wait_ms);
+</script>
+</body>
 </html>
